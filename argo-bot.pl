@@ -33,7 +33,7 @@ use POE::Component::IRC;
 # HELPING SUBROUTINES
 # ===================
 
-# load config file
+# load config file and store valid values in a hash
 sub loadConfig
 {
 	my ($config) = $_[0];
