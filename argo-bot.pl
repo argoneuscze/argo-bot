@@ -45,10 +45,12 @@ sub loadConfig
 	while (<$inputFile>)
 	{
 		chomp;
-		s/^\s+|\s+$|^#.*//;
-		my ($option, $value) = split (/\s*=\s*/, $_, 2);
-		$configHash{$option} = $value;	
-	}	
+		next if /^#/;
+		if (/^\s*([^=]*?)\s*=\s*([^=]*?)\s*$/)
+		{
+			$configHash{$1} = $2;
+		}	
+	}
 	
 	return %configHash;
 }
