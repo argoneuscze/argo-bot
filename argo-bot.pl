@@ -44,8 +44,8 @@ sub loadConfig
 		
 	while (<$inputFile>)
 	{
-		chomp;
 		next if /^#/;
+		chomp;
 		if (/^\s*([^=]*?)\s*=\s*([^=]*?)\s*$/)
 		{
 			$configHash{$1} = $2;
