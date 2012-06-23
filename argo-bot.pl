@@ -32,7 +32,7 @@ use POE::Component::IRC;
 
 use URI::Escape;
 
-use Switch;
+use LWP::UserAgent;
 
 # ===================
 # HELPING SUBROUTINES
@@ -136,9 +136,32 @@ sub onMessage
 	{
 		foreach ($message)
 		{
+			# google command
 			if (/^.google\s(\S.*)$/)
 			{
 				$msg = "http://google.com/search?q=" . uri_escape($1);
+			}
+		}
+	}
+	
+	# check for URLs
+	if ($message =~ m!https?://\S+!)
+	{
+		my @strlist = split(/\s+/, $message);		
+		foreach (@strlist)
+		{
+			if (m!^https?://\S+!)
+			{
+				my $ua = LWP::UserAgent->new();
+				$ua->timeout(5);
+				$ua->env_proxy;
+				$ua->agent('Mozilla/5.0');
+				
+				my $response = $ua->get($_);
+				if ($response->is_success)
+				{
+					$msg = $response->title;
+				}
 			}
 		}
 	}
@@ -148,4 +171,5 @@ sub onMessage
 
 # run bot until done
 $poe_kernel->run();
+
 exit 0;
