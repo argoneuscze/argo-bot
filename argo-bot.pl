@@ -76,3 +76,57 @@ my %config = loadConfig($config_file);
 # BOT CODE
 # ========
 
+# spawn IRC component
+my $irc = POE::Component::IRC->spawn();
+
+# create a new POE session
+POE::Session->create
+(
+	inline_states => 
+		{
+			_start     => \&botStart,
+			irc_001    => \&onConnect,
+			irc_public => \&onMessage,
+		}
+);
+
+# _start
+# called to initialize and connect the bot
+sub botStart
+{
+	$irc->yield(register => "all");
+	$irc->yield
+	(
+		connect =>
+			{
+				Server   => $config{'server'},
+				Port     => $config{'port'},
+				Nick     => $config{'nickname'},
+				Username => $config{'nickname'},
+				Ircname  => $config{'realname'},
+			}
+	);
+	print "Connecting to $config{'server'}:$config{'port'}...\n";
+}
+
+# _onConnect
+# called after bot connects
+sub onConnect
+{
+	print "Connected. Joining channel $config{'channel'}...\n";
+	$irc->yield(join => $config{'channel'});
+	$irc->yield(privmsg => $config{'channel'} => "Hello, everyone! Now that I am here, the fun may begin!");
+}
+
+# _onMessage
+# called everytime a user sends a message into the channel
+sub onMessage
+{
+	my ($sender, $channel, $message, $registered) = @_[ARG0,ARG1,ARG2,ARG3];
+	$sender =~ s/!.*//;
+	$irc->yield(privmsg => $config{'channel'} => "Shut up $sender.");
+}
+
+# run bot until done
+$poe_kernel->run();
+exit 0;
