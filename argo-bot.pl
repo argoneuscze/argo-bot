@@ -26,8 +26,13 @@
 
 use warnings;
 use strict;
+
 use POE;
 use POE::Component::IRC;
+
+use URI::Escape;
+
+use Switch;
 
 # ===================
 # HELPING SUBROUTINES
@@ -124,7 +129,21 @@ sub onMessage
 {
 	my ($sender, $channel, $message, $registered) = @_[ARG0,ARG1,ARG2,ARG3];
 	$sender =~ s/!.*//;
-	$irc->yield(privmsg => $config{'channel'} => "Shut up $sender.");
+	
+	my $msg = '';
+	
+	if ($message =~ m/^$config{'delimiter'}.*/)
+	{
+		foreach ($message)
+		{
+			if (/^.google\s(\S.*)$/)
+			{
+				$msg = "http://google.com/search?q=" . uri_escape($1);
+			}
+		}
+	}
+	
+	if ($msg ne '') {$irc->yield(privmsg => $config{'channel'} => $msg)};
 }
 
 # run bot until done
