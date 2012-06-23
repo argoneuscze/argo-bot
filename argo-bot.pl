@@ -34,6 +34,7 @@ use POE::Component::IRC;
 # ===================
 
 # load config file and store valid values in a hash
+# valid value is in format 'option = value'
 sub loadConfig
 {
 	my ($config) = $_[0];
