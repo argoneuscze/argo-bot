@@ -92,6 +92,7 @@ POE::Session->create
 			_start     => \&botStart,
 			irc_001    => \&onConnect,
 			irc_public => \&onMessage,
+			bot_timer  => \&botTimer,
 		}
 );
 
@@ -99,6 +100,8 @@ POE::Session->create
 # called to initialize and connect the bot
 sub botStart
 {
+	$_[KERNEL]->delay(bot_timer => 1);
+	
 	$irc->yield(register => "all");
 	$irc->yield
 	(
@@ -130,7 +133,7 @@ sub onMessage
 	my ($sender, $channel, $message, $registered) = @_[ARG0,ARG1,ARG2,ARG3];
 	$sender =~ s/!.*//;
 	
-	my $msg = '';
+	my @msg;
 	
 	if ($message =~ m/^$config{'delimiter'}.*/)
 	{
@@ -139,7 +142,7 @@ sub onMessage
 			# google command
 			if (/^.google\s(\S.*)$/)
 			{
-				$msg = "http://google.com/search?q=" . uri_escape($1);
+				push @msg, "http://google.com/search?q=" . uri_escape($1);
 			}
 		}
 	}
@@ -160,13 +163,29 @@ sub onMessage
 				my $response = $ua->get($_);
 				if ($response->is_success)
 				{
-					$msg = $response->title;
+					push @msg, $response->title;	
 				}
 			}
 		}
 	}
 	
-	if ($msg ne '') {$irc->yield(privmsg => $config{'channel'} => $msg)};
+	if (@msg > 0)
+	{
+			push @{$_[HEAP]->{'msg_queue'}}, @msg;
+	} 
+}
+
+# bot_timer subroutine
+# prints the first 5 messsages in the queue with a 1 second delay
+sub botTimer
+{
+	if (defined $_[HEAP]->{'msg_queue'})
+	{
+		splice (@{$_[HEAP]->{'msg_queue'}}, 6) if @{$_[HEAP]->{'msg_queue'}} > 6;
+		$irc->yield(privmsg => $config{'channel'} => shift $_[HEAP]->{'msg_queue'})
+			unless @{$_[HEAP]->{'msg_queue'}} == 0;
+	}
+	$_[KERNEL]->delay(bot_timer => 1);
 }
 
 # run bot until done
