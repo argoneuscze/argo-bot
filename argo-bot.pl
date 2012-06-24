@@ -166,12 +166,7 @@ sub onMessage
 				$ua->timeout(5);
 				$ua->env_proxy;
 				$ua->agent('Mozilla/5.0');
-				
-				my $response = $ua->get($_);
-				if ($response->is_success)
-				{
-					push @msg, $response->title;	
-				}
+				push @msg, $ua->get($_)->title if $ua->get($_)->is_success;
 			}
 		}
 	}
@@ -183,7 +178,7 @@ sub onMessage
 }
 
 # bot_timer subroutine
-# prints the first 5 messsages in the queue with a 1 second delay
+# prints the first 6 messsages in the queue with a 1 second delay
 sub botTimer
 {
 	if (defined $_[HEAP]->{'msg_queue'})
