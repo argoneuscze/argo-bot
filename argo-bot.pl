@@ -144,6 +144,13 @@ sub onMessage
 			{
 				push @msg, "http://google.com/search?q=" . uri_escape($1);
 			}
+			
+			# version command
+			elsif (/^.version$/)
+			{
+				my $version = "argo-bot [in development], https://github.com/argoneuscze/argo-bot";
+				push @msg, $version;
+			}
 		}
 	}
 	
