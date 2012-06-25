@@ -34,6 +34,8 @@ use URI::Escape;
 
 use LWP::UserAgent;
 
+use Safe;
+
 # ===================
 # HELPING SUBROUTINES
 # ===================
@@ -96,7 +98,6 @@ POE::Session->create
 		}
 );
 
-# _start
 # called to initialize and connect the bot
 sub botStart
 {
@@ -117,7 +118,6 @@ sub botStart
 	print "Connecting to $config{'server'}:$config{'port'}...\n";
 }
 
-# _onConnect
 # called after bot connects
 sub onConnect
 {
@@ -126,7 +126,6 @@ sub onConnect
 	$irc->yield(privmsg => $config{'channel'} => "Hello, everyone! Now that I am here, the fun may begin!");
 }
 
-# _onMessage
 # called everytime a user sends a message into the channel
 sub onMessage
 {
@@ -150,6 +149,16 @@ sub onMessage
 			{
 				my $version = "argo-bot [in development], https://github.com/argoneuscze/argo-bot";
 				push @msg, $version;
+			}
+			
+			# perl command, evaluates code
+			# will be very limited to prevent damage
+			elsif (/^.perl\s(\S+.*)$/)
+			{
+				my $cpmt = new Safe;
+				$cpmt->permit_only(qw(:default :base_io));
+				my $result = $cpmt->reval($1);
+				push @msg, $result;
 			}
 		}
 	}
@@ -177,7 +186,6 @@ sub onMessage
 	} 
 }
 
-# bot_timer subroutine
 # prints the first 6 messsages in the queue with a 1 second delay
 sub botTimer
 {
