@@ -152,12 +152,32 @@ sub onMessage
 			}
 			
 			# perl command, evaluates code
-			# will be very limited to prevent damage
+			# very limited to prevent damage
 			elsif (/^.perl\s(\S+.*)$/)
 			{
+				my $printBuffer;
+				my $timedOut = 0;
+				open (my $buffer, '>', \$printBuffer);
+				my $stdout = select($buffer);
 				my $cpmt = new Safe;
 				$cpmt->permit_only(qw(:default :base_io));
-				my $result = $cpmt->reval($1);
+				eval
+				{
+					local $SIG{ALRM} = sub { $timedOut = 1; die "alarm\n" };
+					alarm 3;
+					$cpmt->reval($1);
+					alarm 0;
+				};
+				select($stdout);
+				my $result;													
+				if ($timedOut)
+				{
+					$result = "Expression timed out."; 
+				}
+				else
+				{
+					$result = $printBuffer;
+				}
 				push @msg, $result;
 			}
 		}
