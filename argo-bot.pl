@@ -70,7 +70,7 @@ sub loadConfig
 # set default config file
 my $config_file = "argo-bot.cfg";
 
-# let user set alternative config file
+# let user set alternative config file with parameters '-config FILE'
 if (@ARGV == 2)
 {
 	if($ARGV[0] eq "-config" && @ARGV == 2) { $config_file = $ARGV[1]; }
@@ -155,6 +155,7 @@ sub onMessage
 			# very limited to prevent damage
 			elsif (/^.perl\s(\S+.*)$/)
 			{
+				no warnings;
 				my $printBuffer;
 				my $timedOut = 0;
 				open (my $buffer, '>', \$printBuffer);
@@ -170,15 +171,9 @@ sub onMessage
 				};
 				select($stdout);
 				my $result;													
-				if ($timedOut)
-				{
-					$result = "Expression timed out."; 
-				}
-				else
-				{
-					$result = $printBuffer;
-				}
-				push @msg, $result;
+				if ($timedOut) { $result = "Expression timed out."; }
+				else { $result = $printBuffer; }
+				push @msg, $result if defined $result;
 			}
 		}
 	}
