@@ -30,38 +30,13 @@ use strict;
 use POE;
 use POE::Component::IRC;
 
-use URI::Escape;
+# =================
+# FILE REQUIREMENTS
+# =================
 
-use LWP::UserAgent;
-
-use Safe;
-
-# ===================
-# HELPING SUBROUTINES
-# ===================
-
-# load config file and store valid values in a hash
-# valid value is in format 'option=value' (with lots of tolerance)
-sub loadConfig
-{
-	my ($config) = $_[0];
-	open my $inputFile, "<", $config
-		or die "Can't open '$config' - $!";
-	
-	my %configHash;
-		
-	while (<$inputFile>)
-	{
-		next if /^#/;
-		chomp;
-		if (/^\s*([^=]*?)\s*=\s*([^=]*?)\s*$/)
-		{
-			$configHash{$1} = $2;
-		}
-	}
-	
-	return %configHash;
-}
+require './modules/perl.pl';
+require './modules/title.pl';
+require './modules/config.pl';
 
 # ==============
 # CONFIG LOADING
@@ -76,8 +51,9 @@ if (@ARGV == 2)
 	if($ARGV[0] eq "-config" && @ARGV == 2) { $config_file = $ARGV[1]; }
 }
 
-# load the config
-my %config = loadConfig($config_file);
+# load the config file
+# requires './modules/config.pl'
+my %config = config($config_file);
 
 # ========
 # BOT CODE
@@ -134,71 +110,43 @@ sub onMessage
 	
 	my @msg;
 	
-	if ($message =~ m/^$config{'delimiter'}.*/)
+	if ($message =~ m/^$config{'prefix'}\S+/)
 	{
 		foreach ($message)
 		{
 			# google command
 			if (/^.google\s(\S.*)$/)
 			{
-				push @msg, "http://google.com/search?q=" . uri_escape($1);
+				push @msg, "$sender: http://google.com/search?q=" . uri_escape($1);
 			}
 			
 			# version command
 			elsif (/^.version$/)
 			{
-				my $version = "argo-bot [in development], https://github.com/argoneuscze/argo-bot";
+				my $version = "$sender: argo-bot [in development], https://github.com/argoneuscze/argo-bot";
 				push @msg, $version;
 			}
 			
 			# perl command, evaluates code
 			# very limited to prevent damage
+			# requires './modules/perl.pl'
 			elsif (/^.perl\s(\S+.*)$/)
 			{
-				no warnings;
-				my $printBuffer;
-				my $timedOut = 0;
-				open (my $buffer, '>', \$printBuffer);
-				my $stdout = select($buffer);
-				my $cpmt = new Safe;
-				$cpmt->permit_only(qw(:default :base_io));
-				eval
-				{
-					local $SIG{ALRM} = sub { $timedOut = 1; die "alarm\n" };
-					alarm 3;
-					$cpmt->reval($1);
-					alarm 0;
-				};
-				select($stdout);
-				my $result;													
-				if ($timedOut) { $result = "Expression timed out."; }
-				else { $result = $printBuffer; }
-				push @msg, $result if defined $result;
+				push @msg, perl($1,$sender);
 			}
 		}
 	}
 	
 	# check for URLs
+	# requires './modules/title.pl'
 	if ($message =~ m!https?://\S+!)
 	{
 		my @strlist = split(/\s+/, $message);		
-		foreach (@strlist)
-		{
-			if (m!^https?://\S+!)
-			{
-				my $ua = LWP::UserAgent->new();
-				$ua->timeout(5);
-				$ua->env_proxy;
-				$ua->agent('Mozilla/5.0');
-				push @msg, $ua->get($_)->title if $ua->get($_)->is_success;
-			}
-		}
+		push @msg, title($_) foreach @strlist;
 	}
 	
-	if (@msg > 0)
-	{
-			push @{$_[HEAP]->{'msg_queue'}}, @msg;
-	} 
+	# add messages to queue if any
+	push @{$_[HEAP]->{'msg_queue'}}, @msg if @msg > 0; 
 }
 
 # prints the first 6 messsages in the queue with a 1 second delay
